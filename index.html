@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Graph with vis.js</title>
+    <title>Knowledge Graph</title>
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-<style>
+    <style>
         body { 
             margin: 0; 
             padding: 0; 
@@ -31,13 +31,13 @@
         const nodes = [];
         const edges = [];
 
-         const styles = {
+        const styles = {
             primary: {
                 shape: 'box',
                 color: '#4285F4',
                 font: { 
-                    color: 'black', 
-                    size: 30,  // Increased from 16
+                    color: 'white', 
+                    size: 40,  // Increased from 16
                     face: 'Segoe UI',
                     strokeWidth: 3,
                     strokeColor: '#2a56c6'
@@ -74,6 +74,7 @@
             }
         };
 
+        // [Your existing data array remains exactly the same...]
        const data = [
     { primary: "Pully", secondaries: ["Mechanical Advantage"] },
     { primary: "Gear", secondaries: ["Mechanical Advantage", "Gear Reduction", "Gear Train", "Gearwheel", "Bevel Gear", "Spur Gear", "Miter Gears", "Worm Gears", "Helical Gears", "Screw Gears", "Internal Gears"] },
@@ -163,7 +164,8 @@
             nodes.push({
                 id: item.primary,
                 label: item.primary,
-                ...styles.primary
+                ...styles.primary,
+                widthConstraint: { maximum: 200 }  // Limit width for long labels
             });
 
             item.secondaries.forEach(secondary => {
@@ -174,25 +176,29 @@
                         nodes.push({
                             id: secondary,
                             label: secondary,
-                            ...styles.shared
+                            ...styles.shared,
+                            widthConstraint: { maximum: 180 }
                         });
                     }
                     edges.push({
                         from: item.primary,
                         to: secondary,
-                        color: '#B0B0B0'
+                        color: '#B0B0B0',
+                        width: 2
                     });
                 } else {
                     const nodeId = `${item.primary}-${secondary}`;
                     nodes.push({
                         id: nodeId,
                         label: secondary,
-                        ...styles.secondary
+                        ...styles.secondary,
+                        widthConstraint: { maximum: 160 }
                     });
                     edges.push({
                         from: item.primary,
                         to: nodeId,
-                        color: '#B0B0B0'
+                        color: '#B0B0B0',
+                        width: 2
                     });
                 }
             });
@@ -203,26 +209,104 @@
             { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, 
             {
                 physics: {
-                    stabilization: { iterations: 100 }
+                    stabilization: { 
+                        iterations: 100,
+                        fit: true
+                    },
+                    barnesHut: {
+                        gravitationalConstant: -3000,  // Push nodes apart more
+                        centralGravity: 0.5,
+                        springLength: 200,  // Increased from default
+                        springConstant: 0.05,
+                        damping: 0.2
+                    }
                 },
                 edges: {
-                    smooth: { type: 'continuous' }
+                    smooth: {
+                        type: 'continuous',
+                        roundness: 0.5
+                    },
+                    width: 2,
+                    selectionWidth: 3,
+                    color: {
+                        inherit: false
+                    }
+                },
+                nodes: {
+                    shadow: {
+                        enabled: true,
+                        color: 'rgba(0,0,0,0.2)',
+                        size: 10,
+                        x: 5,
+                        y: 5
+                    }
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 300,
+                    hideEdgesOnDrag: true,
+                    zoomView: true,
+                    multiselect: true
+                },
+                layout: {
+                    randomSeed: 42,  // For consistent layout
+                    improvedLayout: true
                 }
             }
         );
 
+        // Auto-fit when all nodes are loaded
+        network.once("stabilizationIterationsDone", function() {
+            network.fit({
+                nodes: nodes.map(n => n.id),
+                animation: {
+                    duration: 1000,
+                    easingFunction: 'easeInOutQuad'
+                }
+            });
+        });
+
+        // Improved click highlighting
         network.on("click", params => {
-            edges.forEach(edge => edge.color = '#B0B0B0');
+            // Reset all edges
+            edges.update(edges.get().map(edge => {
+                edge.color = '#B0B0B0';
+                edge.width = 2;
+                return edge;
+            }));
 
             if (params.nodes.length) {
                 const nodeId = params.nodes[0];
-                edges.filter(edge =>
-                    edge.from === nodeId || edge.to === nodeId
-                ).forEach(edge => {
-                    edge.color = '#FFD700';
+                edges.update(edges.get()
+                    .filter(edge => edge.from === nodeId || edge.to === nodeId)
+                    .map(edge => {
+                        edge.color = '#FF5722';
+                        edge.width = 4;
+                        return edge;
+                    })
+                );
+                
+                // Center the selected node
+                network.focus(nodeId, {
+                    scale: 1.2,
+                    animation: {
+                        duration: 800,
+                        easingFunction: 'easeInOutQuad'
+                    }
                 });
             }
+        });
 
+        // Add zoom controls
+        network.on("initRedraw", function() {
+            const nav = document.createElement('div');
+            nav.className = 'vis-navigation';
+            nav.innerHTML = `
+                <button onclick="network.moveTo({scale: 1.5})">Zoom In</button>
+                <button onclick="network.moveTo({scale: 0.8})">Zoom Out</button>
+                <button onclick="network.fit()">Reset View</button>
+            `;
+            document.body.appendChild(nav);
         });
     </script>
 </body>
