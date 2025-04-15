@@ -3,14 +3,64 @@
 <head>
     <title>Graph with vis.js</title>
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-   <style>
-        body { margin: 0; padding: 0; overflow: hidden; }
-        #network {
-            width: 100vw;
-            height: 100vh;
-            background: #f7f7f7;
-        }
-    </style>
+  <style>
+    body { 
+        margin: 0; 
+        padding: 0; 
+        overflow: hidden; 
+        font-family: Arial, sans-serif;
+    }
+    
+    #network {
+        width: 100vw;
+        height: 100vh;
+        background: #f0f2f5;
+    }
+    
+    /* Node styling */
+    .vis-node {
+        border-width: 2px !important;
+    }
+    
+    /* Primary nodes */
+    .vis-node.primary {
+        font-size: 18px !important;
+        font-weight: bold;
+    }
+    
+    /* Secondary nodes */
+    .vis-node.secondary {
+        font-size: 14px !important;
+    }
+    
+    /* Shared nodes */
+    .vis-node.shared {
+        font-size: 16px !important;
+        font-weight: 600;
+    }
+    
+    /* Edge styling */
+    .vis-edge {
+        opacity: 0.7;
+    }
+    
+    /* Highlighted edge */
+    .vis-edge.highlight {
+        opacity: 1;
+        stroke-width: 3px !important;
+    }
+    
+    /* Zoom controls */
+    .vis-navigation {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        background: white;
+        padding: 5px;
+        border-radius: 3px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+</style>
 </head>
 <body>
     <div id="network"></div>
