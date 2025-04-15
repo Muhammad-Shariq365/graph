@@ -3,15 +3,26 @@
 <head>
     <title>Graph with vis.js</title>
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-    <style>
-        body { margin: 0; padding: 0; overflow: hidden; }
-        #network {
-            width: fit-content;
-            height: fit-content;
-            display:inline-block;
-            background: #f7f7f7;
-        }
-    </style>
+   <style>
+  body { 
+    margin: 0; 
+    padding: 0; 
+    overflow: hidden; 
+    
+    min-width: fit-content; 
+  }
+  
+  #network {
+    width: fit-content;     
+    display: inline-block;  
+    height: fit-content;    
+    background: #f7f7f7;
+    
+    
+    max-width: 100%;        
+    white-space: nowrap;    
+  }
+</style>
 </head>
 <body>
     <div id="network"></div>
