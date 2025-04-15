@@ -9,73 +9,107 @@
             padding: 0; 
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
         }
         #network {
             width: 100vw;
             height: 100vh;
             background: #f5f7fa;
+            cursor: default;
         }
-        /* Zoom controls styling */
-        .vis-navigation {
-            background-color: #ffffff;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1000;
+        }
+        .zoom-controls button {
+            padding: 8px 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 14px;
+        }
+        .zoom-controls button:hover {
+            background: #f0f0f0;
+        }
+        @media (max-width: 768px) {
+            .zoom-controls {
+                bottom: 10px;
+                right: 10px;
+            }
+            .zoom-controls button {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
     <div id="network"></div>
+    <div class="zoom-controls">
+        <button onclick="network.moveTo({scale: network.getScale()*1.2})">+ Zoom In</button>
+        <button onclick="network.moveTo({scale: network.getScale()*0.8})">- Zoom Out</button>
+        <button onclick="network.fit({nodes: nodes.map(n => n.id)})">Reset View</button>
+    </div>
 
     <script>
         const nodes = [];
         const edges = [];
 
+        
+        const isMobile = window.innerWidth < 768;
+        const baseSize = isMobile ? 16 : 20;
+        
         const styles = {
             primary: {
                 shape: 'box',
                 color: '#4285F4',
                 font: { 
                     color: 'white', 
-                    size: 40,  // Increased from 16
+                    size: isMobile ? baseSize + 8 : baseSize + 12,
                     face: 'Segoe UI',
                     strokeWidth: 3,
                     strokeColor: '#2a56c6'
                 },
-                size: 30,  // Increased node size
-                margin: 15,
-                borderWidth: 3
+                size: isMobile ? baseSize + 10 : baseSize + 15,
+                margin: 10,
+                borderWidth: 2
             },
             secondary: {
                 shape: 'ellipse',
                 color: '#F1F3F4',
                 font: { 
                     color: '#333', 
-                    size: 18,  // Increased from 14
+                    size: isMobile ? baseSize - 2 : baseSize + 2,
                     face: 'Segoe UI',
                     strokeWidth: 2,
                     strokeColor: '#ffffff'
                 },
-                size: 25,  // Increased node size
-                margin: 10
+                size: isMobile ? baseSize + 5 : baseSize + 10,
+                margin: 8
             },
             shared: {
                 shape: 'ellipse',
                 color: '#EA4335',
                 font: { 
                     color: 'white', 
-                    size: 20,  // Increased from 14
+                    size: isMobile ? baseSize : baseSize + 4,
                     face: 'Segoe UI',
-                    strokeWidth: 3,
+                    strokeWidth: 2,
                     strokeColor: '#c23321'
                 },
-                size: 28,  // Increased node size
-                margin: 12
+                size: isMobile ? baseSize + 8 : baseSize + 12,
+                margin: 10
             }
         };
 
-        // [Your existing data array remains exactly the same...]
-       const data = [
+        const data = [
     { primary: "Pully", secondaries: ["Mechanical Advantage"] },
     { primary: "Gear", secondaries: ["Mechanical Advantage", "Gear Reduction", "Gear Train", "Gearwheel", "Bevel Gear", "Spur Gear", "Miter Gears", "Worm Gears", "Helical Gears", "Screw Gears", "Internal Gears"] },
     { primary: "Lever", secondaries: ["Mechanical Advantage", "Beam", "Fulcrum", "Load", "Force", "Push", "Pull"] },
@@ -165,7 +199,10 @@
                 id: item.primary,
                 label: item.primary,
                 ...styles.primary,
-                widthConstraint: { maximum: 200 }  // Limit width for long labels
+                widthConstraint: { 
+                    maximum: isMobile ? 150 : 200,
+                    minimum: 50
+                }
             });
 
             item.secondaries.forEach(secondary => {
@@ -177,14 +214,21 @@
                             id: secondary,
                             label: secondary,
                             ...styles.shared,
-                            widthConstraint: { maximum: 180 }
+                            widthConstraint: { 
+                                maximum: isMobile ? 140 : 180,
+                                minimum: 40
+                            }
                         });
                     }
                     edges.push({
                         from: item.primary,
                         to: secondary,
                         color: '#B0B0B0',
-                        width: 2
+                        width: 1,
+                        smooth: {
+                            type: 'continuous',
+                            roundness: 0.3
+                        }
                     });
                 } else {
                     const nodeId = `${item.primary}-${secondary}`;
@@ -192,70 +236,89 @@
                         id: nodeId,
                         label: secondary,
                         ...styles.secondary,
-                        widthConstraint: { maximum: 160 }
+                        widthConstraint: { 
+                            maximum: isMobile ? 130 : 160,
+                            minimum: 30
+                        }
                     });
                     edges.push({
                         from: item.primary,
                         to: nodeId,
                         color: '#B0B0B0',
-                        width: 2
+                        width: 1,
+                        smooth: {
+                            type: 'continuous',
+                            roundness: 0.3
+                        }
                     });
                 }
             });
         });
 
         const container = document.getElementById("network");
+        const options = {
+            physics: {
+                stabilization: { 
+                    iterations: 100,
+                    fit: true
+                },
+                barnesHut: {
+                    gravitationalConstant: isMobile ? -2000 : -3000,
+                    centralGravity: 0.3,
+                    springLength: isMobile ? 100 : 200,
+                    springConstant: 0.04,
+                    damping: 0.2
+                },
+                solver: 'barnesHut',
+                timestep: 0.5
+            },
+            edges: {
+                width: 1,
+                selectionWidth: 2,
+                smooth: {
+                    type: 'continuous',
+                    roundness: 0.3
+                },
+                color: {
+                    inherit: false
+                }
+            },
+            nodes: {
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(0,0,0,0.2)',
+                    size: 5,
+                    x: 3,
+                    y: 3
+                },
+                font: {
+                    strokeWidth: 1
+                }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 200,
+                hideEdgesOnDrag: false,
+                zoomView: true,
+                multiselect: true,
+                keyboard: {
+                    enabled: true,
+                    speed: { x: 10, y: 10, zoom: 0.1 },
+                    bindToWindow: true
+                }
+            },
+            layout: {
+                randomSeed: 42,
+                improvedLayout: true
+            }
+        };
+
         const network = new vis.Network(container, 
             { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, 
-            {
-                physics: {
-                    stabilization: { 
-                        iterations: 100,
-                        fit: true
-                    },
-                    barnesHut: {
-                        gravitationalConstant: -3000,  // Push nodes apart more
-                        centralGravity: 0.5,
-                        springLength: 200,  // Increased from default
-                        springConstant: 0.05,
-                        damping: 0.2
-                    }
-                },
-                edges: {
-                    smooth: {
-                        type: 'continuous',
-                        roundness: 0.5
-                    },
-                    width: 2,
-                    selectionWidth: 3,
-                    color: {
-                        inherit: false
-                    }
-                },
-                nodes: {
-                    shadow: {
-                        enabled: true,
-                        color: 'rgba(0,0,0,0.2)',
-                        size: 10,
-                        x: 5,
-                        y: 5
-                    }
-                },
-                interaction: {
-                    hover: true,
-                    tooltipDelay: 300,
-                    hideEdgesOnDrag: true,
-                    zoomView: true,
-                    multiselect: true
-                },
-                layout: {
-                    randomSeed: 42,  // For consistent layout
-                    improvedLayout: true
-                }
-            }
+            options
         );
 
-        // Auto-fit when all nodes are loaded
+    
         network.once("stabilizationIterationsDone", function() {
             network.fit({
                 nodes: nodes.map(n => n.id),
@@ -264,31 +327,81 @@
                     easingFunction: 'easeInOutQuad'
                 }
             });
+            
+            if (isMobile) {
+                setTimeout(() => {
+                    network.setOptions({
+                        physics: {
+                            enabled: false
+                        }
+                    });
+                }, 1500);
+            }
         });
 
-        // Improved click highlighting
+        
+        function bringToFront(nodeIds) {
+
+            const connectedEdges = edges.get({
+                filter: edge => nodeIds.includes(edge.from) || nodeIds.includes(edge.to)
+            });
+            
+
+        
+            
+            edges.update(edges.get().map(edge => {
+                if (connectedEdges.some(e => e.id === edge.id)) {
+                    return {
+                        ...edge,
+                        z: 100 
+                    };
+                }
+                return edge;
+            }));
+        }
+
+        
         network.on("click", params => {
-            // Reset all edges
+    
             edges.update(edges.get().map(edge => {
                 edge.color = '#B0B0B0';
-                edge.width = 2;
+                edge.width = 1;
                 return edge;
             }));
 
             if (params.nodes.length) {
                 const nodeId = params.nodes[0];
-                edges.update(edges.get()
-                    .filter(edge => edge.from === nodeId || edge.to === nodeId)
-                    .map(edge => {
-                        edge.color = '#FF5722';
-                        edge.width = 4;
-                        return edge;
-                    })
-                );
                 
-                // Center the selected node
+                
+                const connectedNodeIds = [nodeId];
+                
+                
+                const connectedEdges = edges.get({
+                    filter: edge => edge.from === nodeId || edge.to === nodeId
+                });
+                
+                connectedEdges.forEach(edge => {
+                    if (edge.from === nodeId && !connectedNodeIds.includes(edge.to)) {
+                        connectedNodeIds.push(edge.to);
+                    }
+                    if (edge.to === nodeId && !connectedNodeIds.includes(edge.from)) {
+                        connectedNodeIds.push(edge.from);
+                    }
+                });
+                
+            
+                edges.update(connectedEdges.map(edge => {
+                    edge.color = '#FF5722';
+                    edge.width = 3;
+                    return edge;
+                }));
+                
+            
+                bringToFront(connectedNodeIds);
+                
+        
                 network.focus(nodeId, {
-                    scale: 1.2,
+                    scale: isMobile ? 1.5 : 1.2,
                     animation: {
                         duration: 800,
                         easingFunction: 'easeInOutQuad'
@@ -297,17 +410,70 @@
             }
         });
 
-        // Add zoom controls
-        network.on("initRedraw", function() {
-            const nav = document.createElement('div');
-            nav.className = 'vis-navigation';
-            nav.innerHTML = `
-                <button onclick="network.moveTo({scale: 1.5})">Zoom In</button>
-                <button onclick="network.moveTo({scale: 0.8})">Zoom Out</button>
-                <button onclick="network.fit()">Reset View</button>
-            `;
-            document.body.appendChild(nav);
+   
+        network.on("hoverNode", function(params) {
+            document.getElementById('network').style.cursor = 'pointer';
+            
+           
+            const node = nodes.get(params.node);
+            if (node) {
+                nodes.update({
+                    id: params.node,
+                    font: {
+                        ...node.font,
+                        color: '#FFFF00'
+                    },
+                    borderWidth: 2,
+                    borderColor: '#FFFF00'
+                });
+            }
         });
+
+        network.on("blurNode", function(params) {
+            document.getElementById('network').style.cursor = 'default';
+            
+    
+            const node = nodes.get(params.node);
+            if (node) {
+                let originalStyle;
+                if (node.shape === 'box') {
+                    originalStyle = styles.primary;
+                } else if (node.color === styles.shared.color) {
+                    originalStyle = styles.shared;
+                } else {
+                    originalStyle = styles.secondary;
+                }
+                
+                nodes.update({
+                    id: params.node,
+                    font: originalStyle.font,
+                    borderWidth: originalStyle.borderWidth || 0,
+                    borderColor: originalStyle.borderColor || node.color
+                });
+            }
+        });
+
+       
+
+        network.on("blurEdge", function(params) {
+            document.getElementById('network').style.cursor = 'default';
+            
+        
+            edges.update({
+                id: params.edge,
+                color: '#B0B0B0'
+            });
+        });
+
+        
+        window.addEventListener('resize', function() {
+            network.redraw();
+        });
+
+        
+        if (isMobile) {
+            container.style.touchAction = 'none';
+        }
     </script>
 </body>
 </html>
