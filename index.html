@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Technology Network with Array Approach</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; }
+        #network {
+            width: 100vw;
+            height: 100vh;
+            background: #f7f7f7;
+        }
+    </style>
+</head>
+<body>
+    <div id="network"></div>
+
+    <script>
+        const nodes = [];
+        const edges = [];
+
+        const styles = {
+            primary: {
+                shape: 'box',
+                color: '#4285F4',
+                font: { color: 'white', size: 16 }
+            },
+            secondary: {
+                shape: 'ellipse',
+                color: '#F1F3F4',
+                font: { color: '#333', size: 14 }
+            },
+            shared: {
+                shape: 'ellipse',
+                color: '#EA4335',
+                font: { color: 'white', size: 14 }
+            }
+        };
+
+        const data = [
+            { primary: "Pully", secondaries: ["Mechanical Advantage"] },
+            { primary: "Gear", secondaries: ["Mechanical Advantage", "Gear Reduction", "Gear Train", "Gearwheel"] },
+            { primary: "Lever", secondaries: ["Mechanical Advantage", "Beam"] },
+            { primary: "Hydraulic", secondaries: ["Mechanical Advantage", "Hydraulic cylinder"] },
+            { primary: "Financial Instruments", secondaries: ["Risk Management", "Future", "Option", "Future of Derivatives", "Asset", "Futures Contract"] },
+            { primary: "Arbitrage", secondaries: ["Risk Management", "Cash and Carry", "Reverse Cash and Carry"] },
+            { primary: "Market", secondaries: ["Risk Management", "Stock", "Short Selling", "Long Position", "Options Trading"] },
+            { primary: "Trade", secondaries: ["Risk Management"] },
+            { primary: "Motion", secondaries: ["Linear Motion", "Rotary Motion", "Reciprocating Motion", "Oscillating Motion", "Simple Harmonic Motion"] },
+            { primary: "Heat", secondaries: ["Thermal Energy", "Temperature", "Conduction", "Convection", "Radiation", "Laws of Thermodynamics"] },
+            { primary: "Sound", secondaries: ["Waves", "Frequency", "Pitch", "Amplitude", "Resonance", "Decibel", "Echo"] },
+            { primary: "Light", secondaries: ["Reflection", "Refraction", "Diffraction", "Interference", "Dispersion"] },
+            { primary: "Magnetism", secondaries: ["Magnetic Field", "Electromagnet", "Magnetic Induction", "Ferromagnetism"] },
+            { primary: "Electricity", secondaries: ["Current", "Voltage", "Resistance", "Circuit", "Ohm's Law", "Power", "Energy"] },
+            { primary: "Electronics", secondaries: ["Diode", "Transistor", "IC (Integrated Circuit)", "Microprocessor", "Microcontroller"] },
+            { primary: "Computer", secondaries: ["Hardware", "Software", "Operating System", "Input Devices", "Output Devices"] },
+            { primary: "Communication", secondaries: ["Telecommunication", "Internet", "Wireless", "Bluetooth", "WiFi"] },
+            { primary: "Robotics", secondaries: ["Sensor", "Actuator", "Microcontroller", "Automation"] },
+            { primary: "Artificial Intelligence", secondaries: ["Machine Learning", "Deep Learning", "Neural Network", "Data", "Model"] }
+        ];
+
+        const secondaryMap = {};
+
+        data.forEach(item => {
+            item.secondaries.forEach(secondary => {
+                if (!secondaryMap[secondary]) {
+                    secondaryMap[secondary] = { count: 0, parents: [] };
+                }
+                secondaryMap[secondary].count++;
+                secondaryMap[secondary].parents.push(item.primary);
+            });
+        });
+
+        data.forEach(item => {
+            nodes.push({
+                id: item.primary,
+                label: item.primary,
+                ...styles.primary
+            });
+
+            item.secondaries.forEach(secondary => {
+                const isShared = secondaryMap[secondary].count > 1;
+
+                if (isShared) {
+                    if (!nodes.some(n => n.id === secondary)) {
+                        nodes.push({
+                            id: secondary,
+                            label: secondary,
+                            ...styles.shared
+                        });
+                    }
+                    edges.push({
+                        from: item.primary,
+                        to: secondary,
+                        color: '#B0B0B0'
+                    });
+                } else {
+                    const nodeId = `${item.primary}-${secondary}`;
+                    nodes.push({
+                        id: nodeId,
+                        label: secondary,
+                        ...styles.secondary
+                    });
+                    edges.push({
+                        from: item.primary,
+                        to: nodeId,
+                        color: '#B0B0B0'
+                    });
+                }
+            });
+        });
+
+        const container = document.getElementById("network");
+        const network = new vis.Network(container, 
+            { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, 
+            {
+                physics: {
+                    stabilization: { iterations: 100 }
+                },
+                edges: {
+                    smooth: { type: 'continuous' }
+                }
+            }
+        );
+
+        network.on("click", params => {
+            edges.forEach(edge => edge.color = '#B0B0B0');
+
+            if (params.nodes.length) {
+                const nodeId = params.nodes[0];
+                edges.filter(edge =>
+                    edge.from === nodeId || edge.to === nodeId
+                ).forEach(edge => {
+                    edge.color = '#FFD700';
+                });
+            }
+
+            network.setData({
+                nodes: new vis.DataSet(nodes),
+                edges: new vis.DataSet(edges)
+            });
+        });
+    </script>
+</body>
+</html>
